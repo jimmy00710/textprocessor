@@ -66,4 +66,11 @@ This function removes emojis and emoticons.
 ## Convert Emoji 
 In case we don't want to remove emoji but we want to convert them into text data we can use it. (Feature need to Add)
 
-## 
+## Chat Conversion - 
+(Feature to add)
+
+## Number to words - 
+Function to convert number to words. ( Feature to add)
+
+## Pipeline
+Function which the user can call and it call all the underlying functions. Kind of pipeline the user want to set for preprocessing the text data.
