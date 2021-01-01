@@ -74,3 +74,13 @@ Function to convert number to words. ( Feature to add)
 
 ## Pipeline
 Function which the user can call and it call all the underlying functions. Kind of pipeline the user want to set for preprocessing the text data.
+
+<br>
+<br>
+
+# References 
+<a href= https://www.kaggle.com/sudalairajkumar/getting-started-with-text-preprocessing > Getting started with Text Preprocessing </a>
+
+<a href=https://www.kaggle.com/saxinou/nlp-01-preprocessing-data> NLP 01 Prprocessing Data </a>
+
+<a href=https://www.kaggle.com/theoviel/improve-your-score-with-some-text-preprocessing>Theoviel Text Preprocessing </a>
