@@ -9,77 +9,64 @@ from nltk.stem import PorterStemmer
 import re
 import nltk
 
-from spellchecker import spell_checker
+from wordspellchecker import spell_checker_word
 from contractmapping import contraction_mapping
 
 stop_words = stopwords.words('english')
 
 class NLP_Preprocessor:
-    def __init__(self,df,
-                 lowercase=True,
-                 rm_punctuations=True,
-                 rm_stopwords=True,
-                 rm_pr_stopword_list = [],
-                 rm_freq_words=False,
-                 rm_rare_words= False,
-                 rm_emoji=True,
-                 rm_emoticons=False,
-                 conv_emoticons_to_word = False,
-                 conv_emoji_to_words = False,
-                 rm_urls=True,
-                 rm_html_tags=False,
-                 chat_word_conv=False,
-                 spell_correct=True,
-                 num_to_word=True,
-                 exp_contraction=True,
-                 word_token=True,
-                 sent_token=False,
-                 lemma=True,
-                 stem=False,
-                ):
+    def __init__(self,
+                 df):
     
         self.df = df
-        self.lowercase_fg = lowercase
-        self.punc_fg = rm_punctuations
-        self.stopwords_fg = rm_stopwords
-        self.pr_stopwords_list = rm_pr_stopword_list #Data wise stop word list given by the data scientist.
-        self.freq_words_fg = rm_freq_words
-        self.rare_words_fg = rm_rare_words
-        self.emoji_fg = rm_emoji
-        self.emoticons_fg = rm_emoticons
-        self.emoticon_to_word_fg = conv_emoticons_to_word
-        self.emoji_to_word_fg = conv_emoji_to_words
-        self.url_fg = rm_urls
-        self.html_tag_fg = rm_html_tags
-        self.chat_word_conv_fg = chat_word_conv
-        self.spell_correct_fg = spell_correct
-        self.num_to_word_fg = num_to_word
-        self.exp_contraction_fg = exp_contraction
-        self.word_token_fg = word_token
-        self.sent_token = sent_token
-        self.lemma = lemma
-        self.stem = stem
         self.fdist = FreqDist()
+    
+    
+    def pipeline(self,processing_col):
+
+        '''
+        This is the default pipeline we can use in most of the text data. 
+        In this first we are lowercasing the text data, after lower case we are removing the url, html tag and punctuations.
+        Once punctuations are removed, we are removing the emojis. After removal of emojis we are tokenizing it into word tokens, And lemmatizing it. 
+        Once lemma is created we are removing the stop words and after that we are calculating the frequency distribution. 
+        Based on frequency distribution we are making 2 columns - rm_freq_word and rm_rare_word in both of them we are trying to remove frequent word and rare words.
+        
+        We can further add contract expansion and spell checking based on the project we are doing. 
+        '''
+        self.lowercase(processing_col,'lowercase')
+        self.url_removal('lowercase','urlremoval')
+        self.html_tag('urlremoval','html_tag')
+        self.rm_punc('html_tag','rmpunc')
+        self.remove_emoji('rmpunc','rmemoji')
+        self.word_token('rmemoji','tokens')
+        self.lemmatiz('tokens','lemma')
+        self.rm_stopwords('lemma','rmstopwords')
+        self.freq_words('rmstopwords')
+        self.rm_freq_rare_words_('rmstopwords')
     
     def lowercase(self,
                    processing_col,
                    new_col):
-       
+
+        #Input - Take string 
+        #Output - String
         self.df[new_col] = self.df[processing_col].str.lower()
     
-
     def url_removal(self,
                      processing_col,
                      new_col):
-        
+
+        #Input - String 
+        #Output - String
         url_pattern = re.compile(r'https?://\S+|www\.\S+')
         self.df[new_col] = self.df[processing_col].apply(lambda text: url_pattern.sub(r'',text))
-
-
+        
     def html_tag(self,
                   processing_col,
                   new_col):
-       
+
+       #Input - String 
+       #Output - String 
         html_pattern = re.compile('<.*?>')
         self.df[new_col] = self.df[processing_col].apply(lambda text: html_pattern.sub(r'',text))
     
@@ -88,14 +75,21 @@ class NLP_Preprocessor:
                 processing_col,
                 new_col,
                 punct_remove='!"#$%&\'()*+,-./:;<=>?@[\\]^_{|}~\n`'):
-
+        
+        #Input - String 
+        #Output - String 
         self.df[new_col] = self.df[processing_col].apply(lambda text: text.translate(str.maketrans('','',punct_remove)))
-    
     
     def rm_stopwords(self,
                       processing_col,
                       new_col,
                       stopword_list=[],):
+
+        #Input - String 
+        #Output - List of tokens 
+
+        #The function accept the text data, flag to remove default stop word which are available in nltk.
+        #And at last it accept stopword_list which can be empty
         stop_words = set(stopwords.words('english'))
         #if stopword_list and add=True:
             #Adding both the stop words
@@ -103,13 +97,14 @@ class NLP_Preprocessor:
         self.df[new_col] = self.df[processing_col].apply(lambda text: ' '.join(word for word in text.split() if word not in stop_words))
         self.df[new_col] = self.df[processing_col].apply(lambda text: text.split(' '))
     
-
     def word_token(self,
                     processing_col,
                     new_col):
         #Function to convert all the data into tokens.
+
+        #Input - String 
+        #Output - List of tokens 
         self.df[new_col] = self.df[processing_col].apply(lambda text: nltk.tokenize.word_tokenize(text))
-    
     
     def sent_tokens(self,
                      processing_col,
@@ -121,43 +116,61 @@ class NLP_Preprocessor:
     def lemmatiz(self,
                processing_col,
                new_col):
+
+        #Input - List of tokens 
+        #Output - String 
+
         #Function to apply lemmatization
         lemmatizer = WordNetLemmatizer() 
         self.df[new_col] = self.df[processing_col].apply(lambda tokens : " ".join(lemmatizer.lemmatize(token) for token in tokens ))
         
-    
     def stemmer(self,
                  processing_col,
                  new_col):
+
+        #Input - List of Tokens 
+        #Output - String 
         #Function to apply stemmer
         ps = PorterStemmer()
         self.df[new_col] = self.df[processing_col].apply(lambda tokens : " ".join(ps.stem(token) for token in tokens))
                 
     
     def spell_correct_(self,):
+        #Input - List of Token 
+        #Output - List of token
+
         #Function to check the spelling.
         self.df['spell_corrected'] = self.df[self.col_name].apply(lambda token_list : spell_checker(token_list))
-
-
+       
+    
+    
+        
     def expand_the_contraction(self):
+        
+        #Input - List of tokens 
+        #Output - String 
+
         #Function to expand the contractions.
         self.df['expanded'] = self.df[self.col_name].apply(lambda tokens: " ".join(contraction_mapping(token) for token in tokens))
-
-
+                                                           
     def freq_words(self,
                   processing_col):
         for token_list in list(self.df[processing_col]):
             for token in token_list:
                 self.fdist[token] += 1
     
-    
     def rm_freq_rare_words_(self,
                             preprocessing_col,
-                            new_col_freq_words='top_freq_word',
-                            new_col_rare_words='top_rare_words',
+                            new_col_freq_words='rm_freq_word',
+                            new_col_rare_words='rm_rare_words',
                             top_freq_percent=10,
                             top_rare_percent=1):
+        
         #Function to remove frequent word or rare word depending upon the flag
+        
+        #Input - List of Tokens 
+        #Output - List of Tokens 
+        
         top_freq_words = []
         top_rare_words = []
         
@@ -173,11 +186,14 @@ class NLP_Preprocessor:
         self.df[new_col_rare_words] = self.df[preprocessing_col].apply(lambda tokens : " ".join(token for token in tokens if token not in top_rare_words))
         self.df[new_col_rare_words] = self.df[new_col_rare_words].apply(lambda text: text.split(' '))    
     
-    
     def remove_emoji(self,
                      processing_col,
                      new_col):
         #https://gist.github.com/slowkow/7a7f61f495e3dbb7e3d767f97bd7304b
+
+        #Input - String 
+        #Output - String 
+
         emoji_pattern = re.compile("["
                                    u"\U0001F600-\U0001F64F"  # emoticons
                                    u"\U0001F300-\U0001F5FF"  # symbols & pictographs
@@ -202,11 +218,9 @@ class NLP_Preprocessor:
         #return emoji_pattern.sub(r'', string)
         self.df[new_col] = self.df[processing_col].apply(lambda text: emoji_pattern.sub(r' ',text))
         
-    
     def conv_emoji(self,cnt_list,rm_emoji_fg,rm_emoticon_fg,cnv_emoji_fg,cnv_emoticon_fg):
         #Function to either remove emoji and emoticion or convert them into words.
         pass
-    
     
     def chat_conv(self,
                 df,
@@ -214,8 +228,8 @@ class NLP_Preprocessor:
         #Funciton convert the chat
         pass
     
-    
     def num_to_word_(self,cnt_list):
         #Function to convert numbers to words
         #Skip for now.
         pass
+    

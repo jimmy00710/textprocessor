@@ -1,6 +1,6 @@
 from spellchecker import SpellChecker #pip install pyspellchecker
 
-def spell_checker(token_list):
+def spell_checker_word(token_list):
     #I - List of words or Tokens
     #O - List of Word or Tokens
 
